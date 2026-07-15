@@ -1,0 +1,1049 @@
+{
+  "name": "Customer Support Ticket Router",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "labelIds": [
+            "INBOX"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        32,
+        -16
+      ],
+      "id": "b5207550-6af0-4053-986e-52cb6be6584e",
+      "name": "Gmail(Customer)",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "jLxWaRUIVsLiAsVq",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bc07d4df-f72e-4868-98a9-c277a73e1ea2",
+              "name": "customer_name",
+              "value": "={{ $json.From.match(/^(.*?)\\s*</)?.[1] || $json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "d851f49a-8661-4a50-a15d-2ff63b88b77a",
+              "name": "customer_email",
+              "value": "={{ $json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "c2f45a24-27de-4a12-b00c-46e4ba6e3ce6",
+              "name": "subject",
+              "value": "={{ $json.Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "3ebda84b-225f-4827-916e-732a1a8fca86",
+              "name": "message",
+              "value": "={{ $json.snippet }}",
+              "type": "string"
+            },
+            {
+              "id": "afc18f54-14ea-4c21-870f-f29b1f9a2db6",
+              "name": "received_at",
+              "value": "={{ $json.internalDate }}",
+              "type": "string"
+            },
+            {
+              "id": "d1a1db96-94be-42e9-8213-b3b087450f73",
+              "name": "message_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        272,
+        -16
+      ],
+      "id": "f7be1ab4-b3dc-4fc6-972d-4e9d0efc8af0",
+      "name": "Extract Email Details"
+    },
+    {
+      "parameters": {
+        "model": "cohere/north-mini-code:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        576,
+        528
+      ],
+      "id": "be93181c-eea7-41a1-b9d3-951ea512f5a9",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "QDj45Ha7qs7vErnq",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Customer Name:\n{{ $json.customer_name }}\n\nCustomer Email:\n{{ $json.customer_email }}\n\nSubject:\n{{ $json.subject }}\n\nMessage:\n{{ $json.message }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an enterprise customer support triage assistant.\n\nAnalyze the email.\n\nDetermine:\n\n• category\n• priority\n• sentiment\n• assigned_team\n• summary\n• customer_intent\n• requires_human\n• confidence\n\nCategories\n\nBilling\nTechnical\nSales\nRefund\nFeature Request\nBug Report\nAccount\nGeneral\n\nPriority\n\nLow\nMedium\nHigh\nCritical\n\nRules\n\n• Summary under 40 words.\n• Confidence between 0 and 1.\n• Never invent information.\n• Ignore signatures.\n• Ignore advertisements.\n• Follow the Structured Output Parser exactly."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        736,
+        384
+      ],
+      "id": "995e4033-9013-4f59-a791-e829cd6cfc4b",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "0bfe78ea-e512-43fb-b647-45552209f905",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Category }}",
+                    "rightValue": "Billing",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "22a62cb6-a606-4ecc-8fdb-899d78292726"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Billing"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a6b84425-e8c3-4d55-83b1-596ceb35158b",
+                    "leftValue": "={{ $json.Category }}",
+                    "rightValue": "Technical",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Technical"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a7387d81-9300-41fa-8315-37cbe83f785b",
+                    "leftValue": "={{ $json.Category }}",
+                    "rightValue": "Sales",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Sales"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3432460b-4fc9-43ac-957e-53272b2e5ff8",
+                    "leftValue": "={{ $json.Category }}",
+                    "rightValue": "General",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "General"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1536,
+        -32
+      ],
+      "id": "fd8bcf7f-9308-4402-938a-220640b61708",
+      "name": "Switch",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.customer_email }}",
+        "subject": "=Re: {{ $json.subject }}",
+        "message": "=Hello {{ $json.customer_name }},\n\nThank you for contacting us.\n\nYour request has been received.\n\nTicket ID:\n<b>{{ $json.ticket_id }}</b>\n\nCategory:\n{{ $json.category }}\n\nPriority:\n{{ $json.priority }}\n\nOur {{ $json.assigned_team }} will review your request shortly.\n\nBest regards,\n\nCustomer Support Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2656,
+        -416
+      ],
+      "id": "34eae79a-bed4-4a12-a3c5-96edb96b04ab",
+      "name": "Customer Auto Reply",
+      "webhookId": "d966f16d-1d97-467a-845c-96a24dc31fa0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "jLxWaRUIVsLiAsVq",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "5518864435",
+        "text": "=🚨 High Priority Ticket\n\nTicket:\n{{$json.ticket_id}}\n\nPriority:\n{{$json.priority}}\n\nCustomer:\n{{$json.customer_name}}\n\nCategory:\n{{$json.category}}\n\nSummary:\n{{$json.summary}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2384,
+        -416
+      ],
+      "id": "b111c540-e558-407f-95ff-4e2bb279c556",
+      "name": "Telegram Notify",
+      "webhookId": "5a829c8d-2e7d-4431-8f0a-757d9f8d01c5",
+      "credentials": {
+        "telegramApi": {
+          "id": "2m2ZAnossYlxodgQ",
+          "name": "AI Customer Support Ticket Router"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "beliosinangote2@gmail.com",
+        "subject": "=[{{$json.Priority}}] Sales Inquiry {{$json['Ticket ID']}}",
+        "emailType": "text",
+        "message": "===============================\nNEW SALES INQUIRY\n==============================\n\nTicket Information\n------------------------------\nTicket ID: {{ $json[\"Ticket ID\"] }}\nPriority: {{ $json.Priority }}\nStatus: {{ $json.Status }}\n\nCustomer Information\n------------------------------\nName: {{ $json[\"Customer Name\"] }}\nEmail: {{ $json[\"Customer Email\"] }}\n\nSubject\n------------------------------\n{{ $json.Subject }}\n\nCustomer Message\n------------------------------\n{{ $json.Message }}\n\nAI Analysis\n------------------------------\nCategory: {{ $json.Category }}\nAssigned Team: {{ $json[\"Assigned Team\"] }}\nSummary: {{ $json.Summary }}\nCustomer Intent: {{ $json[\"Customer Intent\"] }}\nSentiment: {{ $json.Sentiment }}\nRequires Human: {{ $json[\"Requires Human\"] }}\nConfidence: {{ $json.Confidence }}\n\nPlease follow up with this potential customer as soon as possible.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1824,
+        80
+      ],
+      "id": "16afc2a2-4ac5-4b41-97fe-0071f0d7d8fc",
+      "name": "Gmail Notify(Sales)",
+      "webhookId": "d966f16d-1d97-467a-845c-96a24dc31fa0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "jLxWaRUIVsLiAsVq",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "beliosinangote2@gmail.com",
+        "subject": "=[{{$json.priority}}] Support Ticket {{$json.ticket_id}}",
+        "emailType": "text",
+        "message": "===============================\nNEW GENERAL SUPPORT TICKET\n==============================\n\nTicket Information\n------------------------------\nTicket ID: {{ $json[\"Ticket ID\"] }}\nPriority: {{ $json.Priority }}\nStatus: {{ $json.Status }}\n\nCustomer Information\n------------------------------\nName: {{ $json[\"Customer Name\"] }}\nEmail: {{ $json[\"Customer Email\"] }}\n\nCustomer Request\n------------------------------\nSubject:\n{{ $json.Subject }}\n\nCustomer Message:\n{{ $json.Message }}\n\nAI Analysis\n------------------------------\nCategory: {{ $json.Category }}\nAssigned Team: {{ $json[\"Assigned Team\"] }}\nSummary: {{ $json.Summary }}\nCustomer Intent: {{ $json[\"Customer Intent\"] }}\nSentiment: {{ $json.Sentiment }}\nRequires Human Review: {{ $json[\"Requires Human\"] }}\nConfidence: {{ $json.Confidence }}\n\nPlease review this request and assign it to the appropriate support representative for further assistance.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1824,
+        288
+      ],
+      "id": "d61bf8a2-2aea-4af6-88a8-3ea0357ef916",
+      "name": "Gmail Notify(General)",
+      "webhookId": "d966f16d-1d97-467a-845c-96a24dc31fa0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "jLxWaRUIVsLiAsVq",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "beliosinangote2@gmail.com",
+        "subject": "=[{{$json.priority}}] Technical Ticket {{$json.ticket_id}}",
+        "emailType": "text",
+        "message": "===============================\nNEW TECHNICAL SUPPORT TICKET\n==============================\n\nTicket Information\n------------------------------\nTicket ID: {{ $json[\"Ticket ID\"] }}\nPriority: {{ $json.Priority }}\nStatus: {{ $json.Status }}\n\nCustomer Information\n------------------------------\nName: {{ $json[\"Customer Name\"] }}\nEmail: {{ $json[\"Customer Email\"] }}\n\nIssue Details\n------------------------------\nSubject:\n{{ $json.Subject }}\n\nCustomer Message:\n{{ $json.Message }}\n\nAI Analysis\n------------------------------\nCategory: {{ $json.Category }}\nAssigned Team: {{ $json[\"Assigned Team\"] }}\nSummary: {{ $json.Summary }}\nCustomer Intent: {{ $json[\"Customer Intent\"] }}\nSentiment: {{ $json.Sentiment }}\nRequires Human Review: {{ $json[\"Requires Human\"] }}\nConfidence: {{ $json.Confidence }}\n\nPlease investigate and resolve this technical issue as soon as possible.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1824,
+        -128
+      ],
+      "id": "065d14ba-6221-4956-a0e0-df0c36c95172",
+      "name": "Gmail Notify(Technical)",
+      "webhookId": "d966f16d-1d97-467a-845c-96a24dc31fa0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "jLxWaRUIVsLiAsVq",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"category\": \"string\",\n  \"priority\": \"string\",\n  \"sentiment\": \"string\",\n  \"assigned_team\": \"string\",\n  \"summary\": \"string\",\n  \"customer_intent\": \"string\",\n  \"requires_human\": true,\n  \"confidence\": 0.95\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1008,
+        528
+      ],
+      "id": "fd1f6020-c856-47ee-906c-43c6eac4e24b",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\n\nconst ticket =\n\"TKT-\" +\nnow.getFullYear() +\nString(now.getMonth()+1).padStart(2,\"0\") +\nString(now.getDate()).padStart(2,\"0\") +\n\"-\" +\nMath.floor(Math.random()*9000+1000);\n\nreturn [{\njson:{\n...$input.first().json,\nticket_id:ticket,\nstatus:\"Open\"\n}\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        -16
+      ],
+      "id": "9e06acbb-46fc-40ca-8070-776548550e8e",
+      "name": "Generate Ticket ID (Code)"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1IbRUfyfJc2KN9vx0au1mR7mpq5aYpMQo44x4n_l4XTw",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Ticket Router",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IbRUfyfJc2KN9vx0au1mR7mpq5aYpMQo44x4n_l4XTw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Support Tickets",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IbRUfyfJc2KN9vx0au1mR7mpq5aYpMQo44x4n_l4XTw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Ticket ID": "={{ $json.ticket_id }}",
+            "Customer Name": "={{ $json.customer_name }}",
+            "Customer Email": "={{ $json.customer_email }}",
+            "Subject": "={{ $json.subject }}",
+            "Message": "={{ $json.message }}",
+            "Received At": "={{ $json.received_at }}",
+            "Status": "={{ $json.status }}",
+            "Category": "={{ $json.output.category }}",
+            "Priority": "={{ $json.output.priority }}",
+            "Sentiment": "={{ $json.output.sentiment }}",
+            "Assigned Team": "={{ $json.output.assigned_team }}",
+            "Summary": "={{ $json.output.summary }}",
+            "Customer Intent": "={{ $json.output.customer_intent }}",
+            "Requires Human": "={{ $json.output.requires_human }}",
+            "Confidence": "={{ $json.output.confidence }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Ticket ID",
+              "displayName": "Ticket ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Email",
+              "displayName": "Customer Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Received At",
+              "displayName": "Received At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Intent",
+              "displayName": "Customer Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Requires Human",
+              "displayName": "Requires Human",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Confidence",
+              "displayName": "Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1280,
+        0
+      ],
+      "id": "bb75a5c3-22c1-4d9d-99d0-069509898495",
+      "name": "Create Ticket Database",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OKkqDH11KnvqdjLy",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0629bb1b-4cda-47da-93d3-dd0f9ecd93fc",
+              "leftValue": "={{ $json.requires_human }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2080,
+        -320
+      ],
+      "id": "fde1ea41-ef10-45e7-b3a8-2aa6b37df4dc",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "beliosinangote2@gmail.com",
+        "subject": "=[{{$json.priority}}] Billing Ticket {{$json.ticket_id}}",
+        "emailType": "text",
+        "message": "===============================\nNEW BILLING SUPPORT TICKET\n==============================\n\nTicket Information\n------------------------------\nTicket ID: {{ $json[\"Ticket ID\"] }}\nPriority: {{ $json.Priority }}\nStatus: {{ $json.Status }}\nCategory: {{ $json.Category }}\n\nCustomer Information\n------------------------------\nName: {{ $json[\"Customer Name\"] }}\nEmail: {{ $json[\"Customer Email\"] }}\n\nBilling Request\n------------------------------\nSubject:\n{{ $json.Subject }}\n\nCustomer Message:\n{{ $json.Message }}\n\nAI Analysis\n------------------------------\nAssigned Team: {{ $json[\"Assigned Team\"] }}\nSummary: {{ $json.Summary }}\nCustomer Intent: {{ $json[\"Customer Intent\"] }}\nSentiment: {{ $json.Sentiment }}\nRequires Human Review: {{ $json[\"Requires Human\"] }}\nConfidence: {{ $json.Confidence }}\n\nPlease review and process this billing request as soon as possible.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1824,
+        -320
+      ],
+      "id": "36a84e63-69e8-4900-b4fa-0d852800a54e",
+      "name": "Gmail Notify(Billing)",
+      "webhookId": "d966f16d-1d97-467a-845c-96a24dc31fa0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "jLxWaRUIVsLiAsVq",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "1.Gmail Trigger\n\nMonitors the support inbox for\nnew customer emails and\nautomatically starts the workflow.\n",
+        "height": 400,
+        "color": "#F127D6"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -224
+      ],
+      "id": "a70a166e-5a99-402b-8ea9-cd1d1061ef05",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "2.Extract Email Details\n\nExtracts key customer\ninformation from the email,\nincluding sender, subject,\nmessage, and timestamp.",
+        "height": 400,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        208,
+        -224
+      ],
+      "id": "d1f823b8-255e-4747-8465-2aa2ac3b9501",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "3.Generate Ticket ID\n\nCreates a unique ticket ID\nand initializes the ticket\nwith an Open status for\ntracking.",
+        "height": 400,
+        "color": "#F5F769"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        464,
+        -224
+      ],
+      "id": "18b9b2d2-303d-4a49-912c-5e89899b6abf",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "4.) AI Agent\n\nAnalyzes the email using AI\nto determine the category,\npriority, sentiment,\ncustomer intent, and\nassigned team.",
+        "height": 528,
+        "width": 608,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        544,
+        208
+      ],
+      "id": "6296d75d-3f7f-449c-8ed7-951472bb8d3d",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "5.) Merge\n\nCombines the original\nticket information with\nthe AI analysis into\na single record.",
+        "height": 400,
+        "color": "#13CD4B"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -224
+      ],
+      "id": "e957c5a8-070b-4644-a966-316c34c5a863",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "6.) Create Ticket Database\n\nStores the complete ticket information in Google Sheets for tracking and reporting.",
+        "height": 400,
+        "color": "#F5F769"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        -224
+      ],
+      "id": "712aa088-543c-45df-adbc-fb36a08850a0",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "7.) Switch\n\nRoutes the ticket to the appropriate department based on the AI-assigned category.",
+        "height": 400,
+        "color": "#CA42F0"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        -224
+      ],
+      "id": "d7828d99-16b3-4857-8bf7-69df54a5130c",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "8.) Billing Notification\n\nSends a notification to the Billing Team via Gmail. High-priority tickets can also trigger Telegram alerts.",
+        "height": 304,
+        "color": "#F7D4EF"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        -480
+      ],
+      "id": "6b5d4545-d16c-48cd-ac5a-9e8c79003d4a",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "9.) Technical Notification\n\nSends the technical issue to the Engineering Team for investigation and resolution.",
+        "height": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        -144
+      ],
+      "id": "dedb74c6-5a61-4185-a198-d4306400c719",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "10.) Sales Notification\n\nForwards sales inquiries to the Sales Team for follow-up with the customer.",
+        "height": 192,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        64
+      ],
+      "id": "227163bc-cd58-4827-8262-d032b1619e89",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "11.) General Notification\n\nRoutes general support requests to the Support Team for further assistance.",
+        "height": 192,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        272
+      ],
+      "id": "701efb01-e895-46a7-afd7-da22127dcd27",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "12.) If\n\nIdentify if its requires human, by using the boolean data type",
+        "height": 304,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        -480
+      ],
+      "id": "d2113825-0dab-4613-a1bc-922f51a31208",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "13.) Telegram Notification\n\nIt will inform the company about the customer status.",
+        "height": 336,
+        "color": "#0E0501"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        -608
+      ],
+      "id": "46fe4eea-4124-4e8d-9c3a-ddf6d189f446",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "14.) Customer Will Received a Reply\n\nThis node would automatically inform the company about the existing billing transaction.",
+        "height": 336,
+        "color": "#824A60"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2592,
+        -608
+      ],
+      "id": "9a5d618d-50df-472e-b9e5-56e11b9701d7",
+      "name": "Sticky Note13"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail(Customer)": {
+      "main": [
+        [
+          {
+            "node": "Extract Email Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Email Details": {
+      "main": [
+        [
+          {
+            "node": "Generate Ticket ID (Code)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Create Ticket Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Gmail Notify(Billing)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Notify(Technical)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Notify(Sales)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Notify(General)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [],
+        [],
+        [],
+        [],
+        []
+      ]
+    },
+    "Telegram Notify": {
+      "main": [
+        [
+          {
+            "node": "Customer Auto Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Ticket ID (Code)": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Ticket Database": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Notify(Technical)": {
+      "main": [
+        []
+      ]
+    },
+    "Gmail Notify(Billing)": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3195e68c-bb64-4fa9-a9fc-733267813bc5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "nodeGroups": [],
+  "id": "RrUtJM9SDOEBzg2V",
+  "tags": []
+}
