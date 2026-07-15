@@ -1,0 +1,22 @@
+{
+  "ticket_id": "TKT-20260715-1967",
+  "customer_name": "John Doe",
+  "customer_email": "john.doe@email.com",
+  "subject": "Unable to Login After Password Reset",
+  "message": "I'm unable to access my account after resetting my password earlier today. Every time I try to sign in, I receive an 'Invalid Credentials' error even though I'm using the new password. Could you please help me restore access to my account as soon as possible?",
+  "received_at": "2026-07-15T10:34:00Z",
+  "message_id": "19f617cfeaaae9f8",
+  "status": "Open",
+
+  "category": "Technical",
+  "priority": "High",
+  "sentiment": "Frustrated",
+  "assigned_team": "Engineering Team",
+
+  "summary": "Customer cannot log in after resetting their password and receives an 'Invalid Credentials' error.",
+
+  "customer_intent": "Restore access to their account as quickly as possible.",
+
+  "requires_human": true,
+  "confidence": 0.97
+}
