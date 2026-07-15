@@ -1,0 +1,20 @@
+From: John Doe <john.doe@email.com>
+To: support@company.com
+Subject: Unable to Login After Password Reset
+Date: July 15, 2026 10:34 AM
+
+Hello Support Team,
+
+I'm unable to access my account after resetting my password earlier today.
+
+Every time I try to sign in, I receive an "Invalid Credentials" error even though I'm using the new password.
+
+Could you please help me restore access to my account as soon as possible? I have important work that needs to be completed today.
+
+Thank you for your assistance.
+
+Best regards,
+
+John Doe
+john.doe@email.com
++63 912 345 6789
