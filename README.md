@@ -96,15 +96,19 @@ The result is a fully automated AI-powered customer support assistant capable of
 
 ## Workflow Automation
 
-- ✅ Switch Node Routing
-- ✅ Department-based Email Notifications
-- ✅ Billing Team Routing
-- ✅ Technical Team Routing
-- ✅ Sales Team Routing
-- ✅ General Support Routing
-- ✅ JavaScript Data Processing
-- ✅ Production-ready Workflow
-
+- ✅ Gmail Trigger Automation
+- ✅ Automatic Ticket ID Generation
+- ✅ Structured Output Parser
+- ✅ Merge Node
+- ✅ Google Sheets Ticket Database
+- ✅ Switch-based Department Routing
+- ✅ Billing Team Notification
+- ✅ Technical Team Notification
+- ✅ Sales Team Notification
+- ✅ General Support Notification
+- ✅ Human Review Detection
+- ✅ Telegram Escalation
+- ✅ Customer Auto Reply
 ---
 
 # 🗺️ System Architecture
@@ -114,7 +118,7 @@ flowchart TD
 
 A[Customer Sends Email]
 
---> B[Gmail Trigger]
+--> B[Gmail(Customer)]
 
 B --> C[Extract Email Details]
 
@@ -122,21 +126,27 @@ C --> D[Generate Ticket ID]
 
 D --> E[AI Agent]
 
-E --> F[Merge Ticket Data]
+E --> F[Structured Output Parser]
 
-F --> G[Create Ticket Database]
+F --> G[Merge Ticket Data]
 
-G --> H{Ticket Category}
+G --> H[Create Ticket Database]
 
-H -->|Billing| I[Gmail Billing Team]
+H --> I{Switch: Category}
 
-H -->|Technical| J[Gmail Technical Team]
+I -->|Billing| J[Gmail Notify (Billing)]
 
-H -->|Sales| K[Gmail Sales Team]
+I -->|Technical| K[Gmail Notify (Technical)]
 
-H -->|General| L[Gmail General Support]
+I -->|Sales| L[Gmail Notify (Sales)]
 
-G --> M[Google Sheets Ticket Database]
+I -->|General| M[Gmail Notify (General)]
+
+J --> N{Requires Human?}
+
+N -->|Yes| O[Telegram Notification]
+
+O --> P[Customer Auto Reply]
 ```
 
 ---
@@ -397,82 +407,132 @@ Routing Rules
 | General | General Support |
 
 Each ticket follows only one route, ensuring that the correct department receives the notification immediately.
-## Node 8 — Gmail (Billing)
+## Node 8 — Gmail Notify (Billing)
 
 ### Purpose
 
-When the AI classifies a ticket as **Billing**, the workflow automatically sends an email notification to the Billing Team.
+If the AI classifies the ticket as **Billing**, the workflow sends a detailed notification email to the Billing Team.
 
-The notification includes the customer's information, AI analysis, and ticket details, allowing billing staff to respond quickly.
-
-Notification Includes
+The notification contains:
 
 - Ticket ID
 - Customer Information
-- Email Subject
+- Subject
 - Customer Message
 - AI Summary
 - Customer Intent
 - Priority
 - Sentiment
 - Confidence Score
+- Human Review Status
+
+The Billing Team can immediately review the customer's billing request.
 
 ---
 
-## Node 9 — Gmail (Technical)
+## Node 9 — IF
 
 ### Purpose
 
-Technical issues are automatically forwarded to the Engineering or Technical Support Team.
+After sending the billing notification, the workflow checks whether the ticket requires manual intervention.
 
-Examples include
+Condition
 
-- Login Issues
-- Software Errors
-- Website Problems
-- Bug Reports
+```
+requires_human == true
+```
+
+If TRUE
+
+- Send Telegram Notification
+- Send Customer Auto Reply
+
+If FALSE
+
+- End Workflow
+---
+
+## Node 10 — Telegram Notification
+
+### Purpose
+
+For billing tickets that require human review, a Telegram alert is sent to notify the support team immediately.
+
+The notification includes:
+
+- Ticket ID
+- Customer Name
+- Priority
+- Summary
+- Assigned Team
+
+This allows urgent billing issues to be escalated instantly.
+
+---
+
+## Node 11 — Customer Auto Reply
+
+### Purpose
+
+After the support team has been notified, the workflow automatically sends an acknowledgment email to the customer.
+
+The email confirms that:
+
+- The request has been received.
+- A support ticket has been created.
+- The Billing Team will review the issue.
+- The customer will receive a follow-up response.
+
+This improves customer communication by providing immediate confirmation.
+
+---
+## Node 12 — Gmail Notify (Technical)
+
+### Purpose
+
+Technical support requests are automatically routed to the Engineering Team.
+
+Examples include:
+
+- Login Problems
 - API Errors
+- Website Issues
+- Bug Reports
 - System Failures
-
-The notification contains complete ticket information together with the AI-generated diagnosis.
-
 ---
-
-## Node 10 — Gmail (Sales)
+## Node 13 — Gmail Notify (Sales)
 
 ### Purpose
 
-Sales-related inquiries are automatically delivered to the Sales Team.
+Sales-related inquiries are automatically forwarded to the Sales Team.
 
-Typical examples include
+Examples include:
 
-- Product Inquiries
-- Pricing Questions
-- Subscription Requests
+- Product Questions
+- Pricing Requests
+- Subscription Inquiries
 - Upgrade Requests
 - Partnership Opportunities
 
-The AI also provides a concise summary and customer intent to help sales representatives prepare their response.
-
+The AI-generated summary and customer intent help the Sales Team respond efficiently.
 ---
-
-## Node 11 — Gmail (General Support)
+## Node 14 — Gmail Notify (General)
 
 ### Purpose
 
-If an email does not fall under Billing, Technical, or Sales, it is automatically routed to the General Support Team.
+General customer inquiries that do not belong to Billing, Technical, or Sales are routed to the General Support Team.
 
-Typical examples include
+Examples include:
 
 - General Questions
 - Feedback
-- Greetings
 - Information Requests
 - Miscellaneous Support
 
-This ensures that no customer email is left unassigned.
-
+This ensures every customer email reaches the appropriate department.
 ---
+
+A notification email containing the ticket details and AI analysis is sent automatically.
 
 # 📊 Ticket Database Structure
 
@@ -528,22 +588,22 @@ The AI returns structured information for every incoming email.
 
 # 🔄 Workflow Summary
 
-The complete workflow follows these steps:
+The workflow processes every incoming customer email through the following steps:
 
-1. Gmail receives a new customer email.
-2. Extract Email Details processes the incoming message.
+1. Gmail(Customer) monitors the inbox for new emails.
+2. Extract Email Details retrieves the required customer information.
 3. Generate Ticket ID creates a unique support ticket.
 4. AI Agent analyzes and classifies the email.
-5. Merge combines customer data with AI analysis.
-6. Create Ticket Database stores the ticket in Google Sheets.
-7. Switch routes the ticket based on its category.
-8. Gmail sends a notification to the appropriate department.
+5. Structured Output Parser validates the AI response.
+6. Merge combines the original ticket with the AI analysis.
+7. Create Ticket Database stores the ticket in Google Sheets.
+8. Switch routes the ticket to the correct department.
+9. Billing tickets are checked for human review.
+10. Billing tickets requiring manual intervention trigger a Telegram notification.
+11. The customer receives an automatic acknowledgment email.
+12. Technical, Sales, and General tickets are delivered directly to their respective departments.
 
-The entire process is fully automated and typically completes within a few seconds, enabling faster response times and consistent ticket handling.
-# 🔐 Credentials Required
-
-Before running the workflow, configure the following credentials inside n8n.
-
+The entire workflow is fully automated and completes within seconds, enabling consistent ticket classification, centralized tracking, and faster response times.
 ## Google Gmail OAuth2
 
 Used for:
@@ -778,14 +838,18 @@ The workflow will begin monitoring incoming customer emails automatically.
 
 | Test | Expected Result |
 |------|-----------------|
-| Receive Customer Email | Workflow Starts |
+| Gmail Trigger | Workflow Starts |
 | Extract Email Details | Success |
 | Generate Ticket ID | Ticket Created |
 | AI Agent | Email Classified |
+| Structured Output Parser | JSON Validated |
 | Merge Node | Data Combined |
 | Google Sheets | Ticket Saved |
 | Switch Node | Correct Branch |
 | Billing Notification | Email Sent |
+| IF Node | Human Review Checked |
+| Telegram Notification | Sent (Billing Only) |
+| Customer Auto Reply | Sent |
 | Technical Notification | Email Sent |
 | Sales Notification | Email Sent |
 | General Notification | Email Sent |
@@ -794,60 +858,25 @@ The workflow will begin monitoring incoming customer emails automatically.
 
 # 📂 Repository Structure
 
-```text
-AI-Customer-Support-Email-Triage-System/
+screenshots/
 
-│
-
-├── README.md
-
-├── workflow.json
-
-│
-
-├── screenshots/
-
-│   ├── workflow.png
-
-│   ├── gmail-trigger.png
-
-│   ├── extract-email-details.png
-
-│   ├── generate-ticket-id.png
-
-│   ├── ai-agent.png
-
-│   ├── merge-node.png
-
-│   ├── google-sheets.png
-
-│   ├── switch-node.png
-
-│   ├── billing-email.png
-
-│   ├── technical-email.png
-
-│   ├── sales-email.png
-
-│   ├── general-email.png
-
-│   └── successful-execution.png
-
-│
-
-├── sample-data/
-
-│   ├── sample-email.txt
-
-│   ├── sample-ticket.json
-
-│   └── sample-google-sheet.xlsx
-
-│
-
-└── LICENSE
-```
-
+├── workflow.png
+├── gmail-trigger.png
+├── extract-email-details.png
+├── generate-ticket-id.png
+├── ai-agent.png
+├── structured-output-parser.png
+├── merge-node.png
+├── create-ticket-database.png
+├── switch-node.png
+├── gmail-billing.png
+├── if-node.png
+├── telegram-notification.png
+├── customer-auto-reply.png
+├── gmail-technical.png
+├── gmail-sales.png
+├── gmail-general.png
+└── successful-execution.png
 ---
 
 # 📸 Recommended Screenshots
