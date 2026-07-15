@@ -4,12 +4,20 @@
 ![OpenRouter](https://img.shields.io/badge/AI-OpenRouter-blue)
 ![JavaScript](https://img.shields.io/badge/Code-JavaScript-yellow)
 ![Gmail](https://img.shields.io/badge/Google-Gmail-red)
-![Google%20Sheets](https://img.shields.io/badge/Google-Sheets-green)
+![Google Sheets](https://img.shields.io/badge/Google-Sheets-green)
 ![MIT](https://img.shields.io/badge/License-MIT-brightgreen)
 
 An AI-powered customer support automation workflow built using **n8n**, **OpenRouter AI**, **JavaScript**, **Gmail API**, and **Google Sheets**.
 
 The workflow automatically monitors incoming customer emails, extracts important information, generates unique support ticket IDs, classifies each email using Artificial Intelligence, stores tickets inside Google Sheets, and automatically routes notifications to the appropriate department including **Billing**, **Technical**, **Sales**, and **General Support**.
+
+---
+
+# 📸 Workflow Overview
+
+<p align="center">
+<img src="screenshots/workflow.png" width="100%">
+</p>
 
 ---
 
@@ -50,15 +58,15 @@ Instead of manually reviewing every email, the workflow automatically:
 8. Identifies customer intent.
 9. Determines the responsible department.
 10. Stores the ticket inside Google Sheets.
-11. Sends an email notification to the correct support team.
-
-The result is a fully automated AI-powered customer support assistant capable of reducing repetitive manual work while improving response speed and ticket organization.
+11. Routes notifications to the correct department.
+12. Sends Telegram alerts for billing tickets requiring human review.
+13. Automatically acknowledges the customer via email.
 
 ---
 
 # ✨ Features
 
-## Email Automation
+## 📧 Email Automation
 
 - ✅ Gmail Trigger Integration
 - ✅ Automatic Email Monitoring
@@ -69,7 +77,7 @@ The result is a fully automated AI-powered customer support assistant capable of
 
 ---
 
-## Artificial Intelligence
+## 🤖 Artificial Intelligence
 
 - ✅ AI Email Classification
 - ✅ Ticket Categorization
@@ -83,7 +91,7 @@ The result is a fully automated AI-powered customer support assistant capable of
 
 ---
 
-## Ticket Management
+## 📋 Ticket Management
 
 - ✅ Automatic Ticket Creation
 - ✅ Ticket Status Tracking
@@ -94,7 +102,7 @@ The result is a fully automated AI-powered customer support assistant capable of
 
 ---
 
-## Workflow Automation
+## ⚙ Workflow Automation
 
 - ✅ Gmail Trigger Automation
 - ✅ Automatic Ticket ID Generation
@@ -109,68 +117,69 @@ The result is a fully automated AI-powered customer support assistant capable of
 - ✅ Human Review Detection
 - ✅ Telegram Escalation
 - ✅ Customer Auto Reply
+
 ---
 
-# 🗺️ System Architecture
+# 🗺️ Workflow Architecture
 
 ```mermaid
-flowchart TD
+flowchart LR
 
-A[Customer Sends Email]
+A["Customer Sends Email"]
+--> B["Gmail(Customer)"]
 
---> B[Gmail(Customer)]
+B --> C["Extract Email Details"]
 
-B --> C[Extract Email Details]
+C --> D["Generate Ticket ID"]
 
-C --> D[Generate Ticket ID]
+D --> E["AI Agent"]
 
-D --> E[AI Agent]
+E --> F["Structured Output Parser"]
 
-E --> F[Structured Output Parser]
+F --> G["Merge"]
 
-F --> G[Merge Ticket Data]
+G --> H["Create Ticket Database"]
 
-G --> H[Create Ticket Database]
+H --> I{"Switch"}
 
-H --> I{Switch: Category}
+I -->|Billing| J["Gmail Notify (Billing)"]
+I -->|Technical| K["Gmail Notify (Technical)"]
+I -->|Sales| L["Gmail Notify (Sales)"]
+I -->|General| M["Gmail Notify (General)"]
 
-I -->|Billing| J[Gmail Notify (Billing)]
+J --> N{"Requires Human?"}
 
-I -->|Technical| K[Gmail Notify (Technical)]
+N -->|Yes| O["Telegram Notification"]
 
-I -->|Sales| L[Gmail Notify (Sales)]
-
-I -->|General| M[Gmail Notify (General)]
-
-J --> N{Requires Human?}
-
-N -->|Yes| O[Telegram Notification]
-
-O --> P[Customer Auto Reply]
+O --> P["Customer Auto Reply"]
 ```
 
 ---
 
 # 🏗 Workflow Implementation
 
-This workflow is composed of multiple automation nodes that work together to process every incoming customer email from start to finish.
+This workflow consists of **14 automation nodes** that process incoming customer emails from start to finish.
 
-Each node has a specific responsibility, beginning with email collection and ending with automated department notification and ticket storage.
+Each node performs a specific responsibility, beginning with monitoring Gmail and ending with department notification, ticket logging, Telegram escalation, and automatic customer acknowledgment.
 
-The following sections explain each node in detail.
-
----
+The following sections explain every node in detail.
 # 🏗 Workflow Implementation
 
-## Node 1 — Gmail(Customer)
+This workflow consists of **14 interconnected automation nodes** that process every incoming customer support email from start to finish.
 
-### Purpose
+Each node performs a specific responsibility, beginning with email collection and ending with intelligent routing, ticket storage, escalation, and customer acknowledgment.
 
-The Gmail Trigger continuously monitors the inbox for newly received customer emails. Whenever a new email arrives, the workflow is automatically executed without any manual intervention.
+---
 
-This serves as the starting point of the automation.
+# Node 1 — Gmail (Customer)
 
-Captured Information
+## Purpose
+
+The Gmail Trigger continuously monitors the support inbox for newly received customer emails.
+
+Whenever a new email arrives, the workflow starts automatically without any manual intervention.
+
+### Captured Information
 
 - Message ID
 - Thread ID
@@ -182,7 +191,270 @@ Captured Information
 - Received Timestamp
 - Gmail Labels
 
-Output Example
+### Output Example
+
+```text
+From:
+john.doe@email.com
+
+Subject:
+Unable to access my account
+
+Message:
+I cannot log in after resetting my password.
+```
+
+---
+
+# Node 2 — Extract Email Details
+
+## Purpose
+
+The Gmail payload contains unnecessary metadata.
+
+This node extracts only the fields required for ticket creation and AI analysis.
+
+### Extracted Fields
+
+- Customer Name
+- Customer Email
+- Subject
+- Message
+- Received Timestamp
+- Message ID
+
+### Example Output
+
+```json
+{
+  "customer_name": "John Doe",
+  "customer_email": "john@email.com",
+  "subject": "Unable to access my account",
+  "message": "I cannot log in after resetting my password.",
+  "received_at": "1784089319000",
+  "message_id": "19f617cfeaaae9f8"
+}
+```
+
+---
+
+# Node 3 — Generate Ticket ID (Code)
+
+## Purpose
+
+Every incoming support request receives a unique ticket number.
+
+The ticket ID allows each request to be tracked independently throughout its lifecycle.
+
+### Example Ticket IDs
+
+```text
+TKT-20260715-1967
+
+TKT-20260715-2043
+
+TKT-20260715-2188
+```
+
+### Additional Fields Created
+
+- Ticket ID
+- Status
+
+### Default Status
+
+```text
+Open
+```
+
+### Example Output
+
+```json
+{
+  "ticket_id": "TKT-20260715-1967",
+  "status": "Open"
+}
+```
+
+---
+
+# Node 4 — AI Agent
+
+## Purpose
+
+The AI Agent analyzes the customer's email using OpenRouter AI.
+
+It automatically classifies the request and extracts structured information for downstream workflow processing.
+
+### AI Analysis
+
+- Ticket Category
+- Priority
+- Sentiment
+- Assigned Team
+- Summary
+- Customer Intent
+- Human Review Requirement
+- Confidence Score
+
+### Allowed Categories
+
+- Billing
+- Technical
+- Sales
+- Refund
+- Feature Request
+- Bug Report
+- Account
+- General
+
+### Priority Levels
+
+- Low
+- Medium
+- High
+- Critical
+
+### Example Output
+
+```json
+{
+  "category": "Technical",
+  "priority": "High",
+  "sentiment": "Frustrated",
+  "assigned_team": "Engineering Team",
+  "summary": "Customer cannot log into the application after resetting the password.",
+  "customer_intent": "Restore account access.",
+  "requires_human": true,
+  "confidence": 0.96
+}
+```
+
+---
+
+# Node 5 — Structured Output Parser
+
+## Purpose
+
+The Structured Output Parser validates the AI response before it continues through the workflow.
+
+It ensures the AI always returns the expected JSON schema and prevents malformed responses from causing workflow failures.
+
+### Validated Fields
+
+- Category
+- Priority
+- Sentiment
+- Assigned Team
+- Summary
+- Customer Intent
+- Requires Human
+- Confidence
+
+### Benefits
+
+- Consistent AI output
+- JSON validation
+- Prevents workflow failures
+- Reliable downstream processing
+
+---
+
+# Node 6 — Merge
+
+## Purpose
+
+The Merge node combines the original customer information with the validated AI analysis.
+
+This creates one complete ticket object that is used by all remaining workflow nodes.
+
+### Customer Information
+
+- Ticket ID
+- Customer Name
+- Customer Email
+- Subject
+- Message
+- Status
+
+### AI Analysis
+
+- Category
+- Priority
+- Sentiment
+- Assigned Team
+- Summary
+- Customer Intent
+- Requires Human
+- Confidence
+
+---
+
+# Node 7 — Create Ticket Database
+
+## Purpose
+
+Every processed support ticket is automatically stored inside Google Sheets.
+
+The spreadsheet serves as a centralized ticket database that can be searched, filtered, and analyzed by the support team.
+
+### Stored Columns
+
+- Ticket ID
+- Customer Name
+- Customer Email
+- Subject
+- Message
+- Received At
+- Status
+- Category
+- Priority
+- Sentiment
+- Assigned Team
+- Summary
+- Customer Intent
+- Requires Human
+- Confidence
+
+### Benefits
+
+- Permanent ticket records
+- Searchable ticket history
+- Customer tracking
+- Department reporting
+- Team workload monitoring
+- Audit trail
+# 🏗️ Workflow Implementation
+
+This workflow is composed of multiple automation nodes that work together to process every incoming customer email from start to finish.
+
+Each node has a specific responsibility, beginning with email collection and ending with automated department notification, customer acknowledgment, and ticket storage.
+
+The following sections explain each node in detail.
+
+---
+
+## Node 1 — Gmail (Customer)
+
+### Purpose
+
+The Gmail Trigger continuously monitors the inbox for newly received customer emails. Whenever a new email arrives, the workflow is automatically executed without any manual intervention.
+
+This serves as the starting point of the automation.
+
+### Captured Information
+
+- Message ID
+- Thread ID
+- Sender Name
+- Sender Email
+- Recipient
+- Subject
+- Email Body
+- Received Timestamp
+- Gmail Labels
+
+### Output Example
 
 ```text
 From:
@@ -205,7 +477,7 @@ The incoming Gmail payload contains a large amount of metadata that is unnecessa
 
 This node extracts only the important customer information required by the AI and the ticketing system.
 
-Extracted Fields
+### Extracted Fields
 
 - Customer Name
 - Customer Email
@@ -214,7 +486,7 @@ Extracted Fields
 - Received Timestamp
 - Message ID
 
-Example Output
+### Example Output
 
 ```json
 {
@@ -233,32 +505,30 @@ Example Output
 
 ### Purpose
 
-Each incoming email receives a unique ticket number.
+Each incoming email receives a unique support ticket number.
 
 The generated ticket allows every customer request to be tracked independently throughout its lifecycle.
 
-Example Ticket IDs
+### Example Ticket IDs
 
 ```text
 TKT-20260715-1967
-
 TKT-20260715-2043
-
 TKT-20260715-2188
 ```
 
-Additional Fields Created
+### Additional Fields Created
 
 - Ticket ID
 - Status
 
-Default Status
+### Default Status
 
 ```text
 Open
 ```
 
-Example Output
+### Example Output
 
 ```json
 {
@@ -273,11 +543,11 @@ Example Output
 
 ### Purpose
 
-The AI Agent is responsible for analyzing the customer's email and automatically classifying the support request.
+The AI Agent analyzes the customer's email and automatically classifies the support request.
 
-Using OpenRouter AI, the model determines the appropriate category, urgency, customer sentiment, intended department, and summarizes the request.
+Using OpenRouter AI, the model determines the ticket category, priority, customer sentiment, assigned department, summary, and whether human review is required.
 
-The AI evaluates
+### AI Analysis
 
 - Ticket Category
 - Priority
@@ -288,7 +558,7 @@ The AI evaluates
 - Human Review Requirement
 - Confidence Score
 
-Allowed Categories
+### Allowed Categories
 
 - Billing
 - Technical
@@ -299,14 +569,14 @@ Allowed Categories
 - Account
 - General
 
-Priority Levels
+### Priority Levels
 
 - Low
 - Medium
 - High
 - Critical
 
-Example AI Output
+### Example Output
 
 ```json
 {
@@ -323,17 +593,33 @@ Example AI Output
 
 ---
 
-## Node 5 — Merge
+## Node 5 — Structured Output Parser
 
 ### Purpose
 
-The Merge node combines the original ticket information with the AI-generated analysis.
+The Structured Output Parser validates the AI response and converts it into a predictable JSON structure.
 
-This creates a single data object that contains all information required for storage and notification.
+This ensures downstream nodes always receive correctly formatted data.
 
-Merged Information
+### Responsibilities
 
-Customer Information
+- Validate JSON output
+- Enforce schema consistency
+- Prevent malformed responses
+- Ensure required fields exist
+- Improve workflow reliability
+
+---
+
+## Node 6 — Merge
+
+### Purpose
+
+The Merge node combines the original customer ticket information with the AI-generated analysis.
+
+This produces a single structured record for storage and routing.
+
+### Customer Information
 
 - Ticket ID
 - Customer Name
@@ -342,7 +628,7 @@ Customer Information
 - Message
 - Status
 
-AI Analysis
+### AI Information
 
 - Category
 - Priority
@@ -355,15 +641,15 @@ AI Analysis
 
 ---
 
-## Node 6 — Create Ticket Database
+## Node 7 — Create Ticket Database
 
 ### Purpose
 
-This node stores every processed ticket inside Google Sheets.
+Stores every processed support ticket inside Google Sheets.
 
-The spreadsheet becomes a centralized ticket database that can be searched, filtered, and reported on by the support team.
+The spreadsheet acts as a centralized ticket management database.
 
-Stored Columns
+### Stored Fields
 
 - Ticket ID
 - Customer Name
@@ -381,7 +667,7 @@ Stored Columns
 - Requires Human
 - Confidence
 
-Benefits
+### Benefits
 
 - Permanent ticket records
 - Searchable history
@@ -391,29 +677,32 @@ Benefits
 
 ---
 
-## Node 7 — Switch
+## Node 8 — Switch
 
 ### Purpose
 
-The Switch node automatically routes tickets to the appropriate department based on the AI classification.
+The Switch node routes tickets to the appropriate department based on the AI-generated category.
 
-Routing Rules
+### Routing Rules
 
 | Category | Department |
-|----------|------------|
+|-----------|------------|
 | Billing | Billing Team |
 | Technical | Technical Team |
 | Sales | Sales Team |
 | General | General Support |
 
-Each ticket follows only one route, ensuring that the correct department receives the notification immediately.
-## Node 8 — Gmail Notify (Billing)
+Each ticket follows only one branch, ensuring notifications are delivered to the correct department.
+
+---
+
+## Node 9 — Gmail Notify (Billing)
 
 ### Purpose
 
-If the AI classifies the ticket as **Billing**, the workflow sends a detailed notification email to the Billing Team.
+Billing tickets are automatically forwarded to the Billing Team.
 
-The notification contains:
+The notification includes:
 
 - Ticket ID
 - Customer Information
@@ -426,114 +715,108 @@ The notification contains:
 - Confidence Score
 - Human Review Status
 
-The Billing Team can immediately review the customer's billing request.
-
 ---
 
-## Node 9 — IF
+## Node 10 — IF (Requires Human)
 
 ### Purpose
 
-After sending the billing notification, the workflow checks whether the ticket requires manual intervention.
+After the Billing Team notification is sent, the workflow determines whether manual intervention is required.
 
-Condition
+### Condition
 
-```
+```text
 requires_human == true
 ```
 
-If TRUE
+### TRUE
 
-- Send Telegram Notification
-- Send Customer Auto Reply
+- Telegram Notification
+- Customer Auto Reply
 
-If FALSE
+### FALSE
 
 - End Workflow
+
 ---
 
-## Node 10 — Telegram Notification
+## Node 11 — Telegram Notification
 
 ### Purpose
 
-For billing tickets that require human review, a Telegram alert is sent to notify the support team immediately.
+Critical billing tickets requiring manual review trigger an instant Telegram notification.
 
-The notification includes:
+### Notification Includes
 
 - Ticket ID
 - Customer Name
 - Priority
-- Summary
 - Assigned Team
-
-This allows urgent billing issues to be escalated instantly.
+- AI Summary
 
 ---
 
-## Node 11 — Customer Auto Reply
+## Node 12 — Customer Auto Reply
 
 ### Purpose
 
-After the support team has been notified, the workflow automatically sends an acknowledgment email to the customer.
+An automatic acknowledgment email is sent to the customer confirming that their request has been received.
 
-The email confirms that:
+The email includes:
 
-- The request has been received.
-- A support ticket has been created.
-- The Billing Team will review the issue.
-- The customer will receive a follow-up response.
-
-This improves customer communication by providing immediate confirmation.
+- Ticket ID
+- Status
+- Assigned Department
+- Estimated next step
 
 ---
-## Node 12 — Gmail Notify (Technical)
+
+## Node 13 — Gmail Notify (Technical)
 
 ### Purpose
 
-Technical support requests are automatically routed to the Engineering Team.
+Technical support requests are automatically routed to the Technical Support Team.
 
-Examples include:
+Typical examples include:
 
 - Login Problems
 - API Errors
+- Software Bugs
 - Website Issues
-- Bug Reports
 - System Failures
+
 ---
-## Node 13 — Gmail Notify (Sales)
+
+## Node 14 — Gmail Notify (Sales)
 
 ### Purpose
 
-Sales-related inquiries are automatically forwarded to the Sales Team.
+Sales-related inquiries are forwarded directly to the Sales Team.
 
-Examples include:
+Typical examples include:
 
 - Product Questions
 - Pricing Requests
-- Subscription Inquiries
+- Subscription Plans
 - Upgrade Requests
 - Partnership Opportunities
 
-The AI-generated summary and customer intent help the Sales Team respond efficiently.
 ---
-## Node 14 — Gmail Notify (General)
+
+## Node 15 — Gmail Notify (General)
 
 ### Purpose
 
-General customer inquiries that do not belong to Billing, Technical, or Sales are routed to the General Support Team.
+General customer inquiries are routed to the General Support Team.
 
-Examples include:
+Typical examples include:
 
 - General Questions
 - Feedback
 - Information Requests
 - Miscellaneous Support
 
-This ensures every customer email reaches the appropriate department.
----
-
-A notification email containing the ticket details and AI analysis is sent automatically.
-
+This ensures every customer email is assigned to the appropriate department.
 # 📊 Ticket Database Structure
 
 Every processed ticket is stored inside Google Sheets using the following columns.
@@ -561,17 +844,17 @@ Every processed ticket is stored inside Google Sheets using the following column
 # 📧 Department Routing
 
 | Category | Destination |
-|----------|-------------|
-| Billing | Billing Team Email |
-| Technical | Technical Support Email |
-| Sales | Sales Team Email |
-| General | General Support Email |
+|-----------|-------------|
+| Billing | Billing Team |
+| Technical | Technical Support Team |
+| Sales | Sales Team |
+| General | General Support Team |
 
 ---
 
 # 🧠 AI Classification Fields
 
-The AI returns structured information for every incoming email.
+The AI Agent returns structured information for every incoming customer email.
 
 | Field | Description |
 |---------|-------------|
@@ -580,8 +863,8 @@ The AI returns structured information for every incoming email.
 | Sentiment | Customer emotion |
 | Assigned Team | Responsible department |
 | Summary | Brief overview of the issue |
-| Customer Intent | Purpose of the email |
-| Requires Human | Human review required |
+| Customer Intent | Customer's primary goal |
+| Requires Human | Indicates whether manual review is required |
 | Confidence | AI confidence score |
 
 ---
@@ -590,28 +873,36 @@ The AI returns structured information for every incoming email.
 
 The workflow processes every incoming customer email through the following steps:
 
-1. Gmail(Customer) monitors the inbox for new emails.
+1. Gmail (Customer) monitors the inbox for new emails.
 2. Extract Email Details retrieves the required customer information.
 3. Generate Ticket ID creates a unique support ticket.
 4. AI Agent analyzes and classifies the email.
 5. Structured Output Parser validates the AI response.
-6. Merge combines the original ticket with the AI analysis.
+6. Merge combines the customer data with the AI analysis.
 7. Create Ticket Database stores the ticket in Google Sheets.
 8. Switch routes the ticket to the correct department.
-9. Billing tickets are checked for human review.
-10. Billing tickets requiring manual intervention trigger a Telegram notification.
-11. The customer receives an automatic acknowledgment email.
+9. Billing tickets continue to the Human Review check.
+10. If required, Telegram sends an escalation alert.
+11. The customer automatically receives an acknowledgment email.
 12. Technical, Sales, and General tickets are delivered directly to their respective departments.
 
-The entire workflow is fully automated and completes within seconds, enabling consistent ticket classification, centralized tracking, and faster response times.
+The entire workflow is fully automated and typically completes within a few seconds, providing faster response times, centralized ticket tracking, and consistent AI-powered ticket classification.
+
+---
+
+# 🔐 Credentials Required
+
+Before running the workflow, configure the following credentials inside n8n.
+
 ## Google Gmail OAuth2
 
 Used for:
 
 - Monitoring incoming customer emails
-- Sending automated notifications to each department
+- Sending department notifications
+- Sending customer acknowledgment emails
 
-Required Permissions
+### Required Permissions
 
 - Read Emails
 - Send Emails
@@ -626,7 +917,7 @@ Used for:
 - Logging every processed support ticket
 - Updating ticket records
 
-Required Permissions
+### Required Permissions
 
 - Read Spreadsheet
 - Write Spreadsheet
@@ -637,11 +928,11 @@ Required Permissions
 
 The AI Agent uses OpenRouter to classify customer emails and generate structured ticket information.
 
-Required
+### Required
 
 - OpenRouter API Key
 
-Example Models
+### Supported Models
 
 - GPT-4.1 Mini
 - GPT-4o Mini
@@ -651,11 +942,22 @@ Example Models
 
 ---
 
+## Telegram Bot API
+
+Used for sending human-review notifications.
+
+### Required
+
+- Telegram Bot Token
+- Chat ID
+
+---
+
 ## n8n
 
 Workflow Platform
 
-Compatible with
+Compatible with:
 
 - n8n Cloud
 - Self-hosted n8n
@@ -667,24 +969,18 @@ Compatible with
 ## Step 1 — Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/AI-Customer-Support-Email-Triage-System.git
+git clone https://github.com/belioautomation/AI-Customer-Support-Email-Triage-System-using-n8n.git
 ```
-
-Open the project folder.
 
 ---
 
 ## Step 2 — Import the Workflow
 
-Inside n8n
+Import the following file into n8n.
 
-Import
-
-```
+```text
 workflow.json
 ```
-
-The workflow will automatically create all required nodes.
 
 ---
 
@@ -692,13 +988,14 @@ The workflow will automatically create all required nodes.
 
 Create a Gmail OAuth2 credential.
 
-Connect it to
+Connect it to:
 
-- Gmail(Customer)
-- Gmail (Billing)
-- Gmail (Technical)
-- Gmail (Sales)
-- Gmail (General)
+- Gmail (Customer)
+- Gmail Notify (Billing)
+- Gmail Notify (Technical)
+- Gmail Notify (Sales)
+- Gmail Notify (General)
+- Customer Auto Reply
 
 ---
 
@@ -706,55 +1003,51 @@ Connect it to
 
 Create a Google Sheets OAuth2 credential.
 
-Connect it to
+Connect it to:
 
 ```
 Create Ticket Database
 ```
 
-Create a spreadsheet with the required ticket columns.
-
 ---
 
 ## Step 5 — Configure OpenRouter
 
-Create an OpenRouter account.
+Create an OpenRouter API Key.
 
-Generate an API Key.
-
-Inside the AI Agent node
-
-Configure
+Inside the AI Agent node configure:
 
 - Base URL
 - API Key
-- Model
+- AI Model
 
-Example
+Example:
 
 ```
-Model:
 GPT-4.1 Mini
 ```
 
 ---
 
-## Step 6 — Configure the AI Agent
+## Step 6 — Configure Telegram
 
-The AI Agent should receive the following customer information.
+Create a Telegram Bot.
 
-Input
+Add the Bot Token and Chat ID inside the Telegram Notification node.
 
+---
+
+## Step 7 — Configure Google Sheets
+
+Create the following columns:
+
+- Ticket ID
 - Customer Name
 - Customer Email
 - Subject
 - Message
-- Ticket ID
+- Received At
 - Status
-- Received Time
-
-The AI returns
-
 - Category
 - Priority
 - Sentiment
@@ -766,55 +1059,31 @@ The AI returns
 
 ---
 
-## Step 7 — Configure Google Sheets
-
-Create the following columns exactly as shown.
-
-| Column |
-|---------|
-| Ticket ID |
-| Customer Name |
-| Customer Email |
-| Subject |
-| Message |
-| Received At |
-| Status |
-| Category |
-| Priority |
-| Sentiment |
-| Assigned Team |
-| Summary |
-| Customer Intent |
-| Requires Human |
-| Confidence |
-
----
-
 ## Step 8 — Configure Department Emails
 
-Update each Gmail node with the appropriate destination email.
+Update the destination email addresses.
 
 Billing
 
-```
+```text
 billing@company.com
 ```
 
 Technical
 
-```
+```text
 technical@company.com
 ```
 
 Sales
 
-```
+```text
 sales@company.com
 ```
 
-General Support
+General
 
-```
+```text
 support@company.com
 ```
 
@@ -822,11 +1091,9 @@ support@company.com
 
 ## Step 9 — Activate the Workflow
 
-Once every credential has been configured,
+After configuring all credentials, click
 
-Click
-
-```
+```text
 Activate
 ```
 
@@ -858,25 +1125,50 @@ The workflow will begin monitoring incoming customer emails automatically.
 
 # 📂 Repository Structure
 
-screenshots/
+```text
+AI-Customer-Support-Email-Triage-System-using-n8n/
 
-├── workflow.png
-├── gmail-trigger.png
-├── extract-email-details.png
-├── generate-ticket-id.png
-├── ai-agent.png
-├── structured-output-parser.png
-├── merge-node.png
-├── create-ticket-database.png
-├── switch-node.png
-├── gmail-billing.png
-├── if-node.png
-├── telegram-notification.png
-├── customer-auto-reply.png
-├── gmail-technical.png
-├── gmail-sales.png
-├── gmail-general.png
-└── successful-execution.png
+│
+
+├── README.md
+
+├── workflow.json
+
+│
+
+├── sample-data/
+
+│   ├── sample-email.txt
+│   ├── sample-ticket.json
+│   └── sample-google-sheet.xlsx
+
+│
+
+├── screenshots/
+
+│   ├── workflow.png
+│   ├── gmail-customer.png
+│   ├── extract-email-details.png
+│   ├── generate-ticket-id.png
+│   ├── ai-agent.png
+│   ├── structured-output-parser.png
+│   ├── merge-node.png
+│   ├── create-ticket-database.png
+│   ├── switch-node.png
+│   ├── gmail-billing.png
+│   ├── if-node.png
+│   ├── telegram-notification.png
+│   ├── customer-auto-reply.png
+│   ├── gmail-technical.png
+│   ├── gmail-sales.png
+│   ├── gmail-general.png
+│   └── successful-execution.png
+
+│
+
+└── LICENSE
+```
+
 ---
 
 # 📸 Recommended Screenshots
@@ -884,214 +1176,22 @@ screenshots/
 Include screenshots of the following workflow components.
 
 - Complete Workflow
-- Gmail(Customer)
+- Gmail (Customer)
 - Extract Email Details
 - Generate Ticket ID
 - AI Agent
+- Structured Output Parser
 - Merge Node
-- Google Sheets Ticket Database
+- Create Ticket Database
 - Switch Node
-- Billing Email Notification
-- Technical Email Notification
-- Sales Email Notification
-- General Support Email Notification
+- Gmail Notify (Billing)
+- IF Node
+- Telegram Notification
+- Customer Auto Reply
+- Gmail Notify (Technical)
+- Gmail Notify (Sales)
+- Gmail Notify (General)
 - Successful Workflow Execution
-
----
-
-# 📈 Example Ticket Record
-
-| Field | Example |
-|---------|---------|
-| Ticket ID | TKT-20260715-1967 |
-| Customer Name | John Doe |
-| Customer Email | john@example.com |
-| Subject | Unable to login |
-| Category | Technical |
-| Priority | High |
-| Status | Open |
-| Assigned Team | Engineering Team |
-| Sentiment | Frustrated |
-| Confidence | 0.97 |
-
----
-
-# 📊 Workflow Benefits
-
-This automation provides several operational advantages.
-
-- Faster customer response times
-- Automatic ticket creation
-- Consistent AI-based email classification
-- Reduced manual workload
-- Centralized ticket database
-- Improved team collaboration
-- Automatic department routing
-- Better customer support organization
-- Easily scalable workflow
-- Production-ready automation
-  # 🚀 Future Improvements
-
-Although the workflow is production-ready, several enhancements can further improve its capabilities and scalability.
-
-## Customer Support Features
-
-- Automatic Ticket Status Updates
-- Ticket Reopening Support
-- Ticket Escalation Rules
-- SLA Monitoring
-- Auto-close Resolved Tickets
-- Duplicate Ticket Detection
-- Customer Satisfaction (CSAT) Surveys
-- Multi-language Email Support
-
----
-
-## Artificial Intelligence
-
-- AI Suggested Replies
-- Automatic Response Draft Generation
-- Intent Confidence Thresholds
-- AI-powered Ticket Prioritization
-- Email Spam Detection
-- Email Language Detection
-- Sentiment Trend Analysis
-- AI Knowledge Base Integration
-
----
-
-## Integrations
-
-- Slack Notifications
-- Microsoft Teams Notifications
-- Discord Notifications
-- Microsoft Outlook Support
-- PostgreSQL Ticket Database
-- MySQL Support
-- Airtable Integration
-- Notion Ticket Dashboard
-
----
-
-## Analytics Dashboard
-
-- Daily Ticket Volume
-- Weekly Ticket Reports
-- Monthly Ticket Reports
-- Department Performance
-- Average Response Time
-- Resolution Time Analytics
-- Customer Satisfaction Dashboard
-- AI Classification Accuracy
-- Priority Distribution
-- Ticket Category Distribution
-
----
-
-## Local AI Support
-
-Reduce API costs by running local Large Language Models.
-
-Supported Platforms
-
-- Ollama
-- LM Studio
-- Open WebUI
-- LocalAI
-
-Example Models
-
-- Llama 3
-- Gemma
-- DeepSeek
-- Qwen
-- Mistral
-
----
-
-## Enterprise Features
-
-- Multi-agent Customer Support
-- Role-based Access Control
-- Audit Logs
-- Ticket Attachments
-- Knowledge Base Search
-- Approval Workflows
-- Human-in-the-loop Review
-- Webhook Integrations
-- REST API Endpoints
-
----
-
-# 💼 Skills Applied
-
-This project demonstrates practical skills across workflow automation, artificial intelligence, cloud integrations, and JavaScript development.
-
-## Workflow Automation
-
-- n8n Workflow Automation
-- Event-driven Automation
-- Conditional Routing
-- Email Automation
-- Process Automation
-- Business Workflow Design
-
----
-
-## Artificial Intelligence
-
-- OpenRouter AI
-- Prompt Engineering
-- AI-powered Email Classification
-- Sentiment Analysis
-- Intent Recognition
-- Structured JSON Output
-
----
-
-## APIs
-
-- Gmail API
-- Google Sheets API
-- OpenRouter API
-
----
-
-## Programming
-
-- JavaScript
-- JSON Parsing
-- Data Transformation
-- Workflow Logic
-- Error Handling
-
----
-
-## Business Automation
-
-- Customer Support Automation
-- AI Ticket Classification
-- Help Desk Automation
-- Email Routing
-- Ticket Management
-- Business Process Automation
-
----
-
-# 📚 Learning Objectives
-
-This project demonstrates how to:
-
-- Build an AI-powered customer support automation workflow
-- Automatically process incoming Gmail messages
-- Extract structured information from emails
-- Generate unique support ticket IDs
-- Design AI prompts for consistent classification
-- Route emails using conditional workflow logic
-- Store structured ticket records in Google Sheets
-- Send automated department notifications
-- Build scalable AI-powered business workflows
-- Create production-ready n8n automations
 
 ---
 
@@ -1130,7 +1230,7 @@ Thank you.
   "category": "Technical",
   "priority": "High",
   "sentiment": "Frustrated",
-  "assigned_team": "Engineering Team",
+  "assigned_team": "Technical Team",
   "summary": "Customer cannot access their account after resetting the password.",
   "customer_intent": "Recover account access.",
   "requires_human": true,
@@ -1144,7 +1244,7 @@ Thank you.
 
 | Ticket ID | Category | Priority | Assigned Team | Status |
 |------------|----------|----------|---------------|--------|
-| TKT-20260715-1967 | Technical | High | Engineering Team | Open |
+| TKT-20260715-1967 | Technical | High | Technical Team | Open |
 
 ---
 
@@ -1152,7 +1252,6 @@ Thank you.
 
 ```text
 Subject:
-
 [High] Technical Ticket TKT-20260715-1967
 
 Customer:
@@ -1172,27 +1271,173 @@ Please investigate immediately.
 
 ---
 
+# 📊 Workflow Benefits
+
+This automation provides several operational advantages.
+
+- Faster customer response times
+- Automatic ticket creation
+- AI-powered ticket classification
+- Reduced manual workload
+- Centralized Google Sheets database
+- Automatic department routing
+- Human review escalation
+- Customer acknowledgment emails
+- Scalable workflow design
+- Production-ready automation
+
+---
+
+# 🚀 Future Improvements
+
+## Customer Support
+
+- Ticket Status Updates
+- Ticket Escalation Rules
+- SLA Monitoring
+- Auto-close Resolved Tickets
+- Duplicate Ticket Detection
+- Customer Satisfaction (CSAT)
+- Multi-language Support
+
+---
+
+## Artificial Intelligence
+
+- AI Suggested Replies
+- AI Draft Responses
+- Spam Detection
+- Language Detection
+- Intent Confidence Threshold
+- Sentiment Analytics
+- Knowledge Base Integration
+
+---
+
+## Integrations
+
+- Slack Notifications
+- Microsoft Teams
+- Discord Notifications
+- Microsoft Outlook
+- PostgreSQL
+- MySQL
+- Airtable
+- Notion
+
+---
+
+## Analytics
+
+- Daily Ticket Reports
+- Weekly Reports
+- Monthly Reports
+- Team Performance
+- Resolution Time
+- AI Accuracy Dashboard
+- Category Analytics
+- Priority Analytics
+
+---
+
+## Local AI
+
+- Ollama
+- LM Studio
+- Open WebUI
+- LocalAI
+
+Supported Models
+
+- Llama 3
+- Gemma
+- DeepSeek
+- Qwen
+- Mistral
+
+---
+
+# 💼 Skills Applied
+
+## Workflow Automation
+
+- n8n Workflow Automation
+- Event-driven Workflows
+- Conditional Routing
+- Email Automation
+- Business Process Automation
+
+---
+
+## Artificial Intelligence
+
+- OpenRouter AI
+- Prompt Engineering
+- Email Classification
+- Sentiment Analysis
+- Intent Recognition
+- Structured Output Parsing
+
+---
+
+## APIs
+
+- Gmail API
+- Google Sheets API
+- OpenRouter API
+- Telegram Bot API
+
+---
+
+## Programming
+
+- JavaScript
+- JSON Parsing
+- Data Transformation
+- Workflow Logic
+- Error Handling
+
+---
+
+## Business Automation
+
+- Customer Support Automation
+- Help Desk Automation
+- Ticket Management
+- Department Routing
+- AI-powered Business Workflows
+
+---
+
+# 📚 Learning Objectives
+
+This project demonstrates how to:
+
+- Build an AI-powered customer support workflow
+- Process Gmail messages automatically
+- Generate unique support tickets
+- Classify customer emails using AI
+- Validate structured AI output
+- Route tickets using Switch nodes
+- Store tickets in Google Sheets
+- Send automated department notifications
+- Trigger Telegram escalation alerts
+- Build production-ready n8n workflows
+
+---
+
 # 🎯 Project Highlights
 
-✔ AI-powered email classification
-
-✔ Automatic ticket generation
-
-✔ Intelligent department routing
-
-✔ Google Sheets ticket database
-
-✔ Gmail notification automation
-
-✔ OpenRouter AI integration
-
-✔ JavaScript data transformation
-
-✔ Production-ready n8n workflow
-
-✔ End-to-end customer support automation
-
-✔ Easily customizable and scalable
+- ✔ AI-powered Email Classification
+- ✔ Automatic Ticket Generation
+- ✔ Structured Output Parsing
+- ✔ Google Sheets Ticket Database
+- ✔ Department-based Routing
+- ✔ Telegram Escalation Alerts
+- ✔ Customer Auto Reply
+- ✔ OpenRouter AI Integration
+- ✔ JavaScript Data Processing
+- ✔ Production-ready n8n Workflow
 
 ---
 
@@ -1202,10 +1447,10 @@ Special thanks to the following technologies that made this project possible:
 
 - n8n
 - OpenRouter
-- Google Gmail API
+- Gmail API
 - Google Sheets API
+- Telegram Bot API
 - JavaScript
-- OpenAI-compatible Language Models
 
 ---
 
@@ -1223,7 +1468,7 @@ GitHub:
 
 ---
 
-This project is part of my **30-Day n8n Automation Portfolio**, showcasing practical workflow automation projects using **n8n**, **Artificial Intelligence**, **JavaScript**, and **Google Workspace APIs**.
+This project is part of my **30-Day n8n Automation Portfolio**, showcasing practical workflow automation using **n8n**, **OpenRouter AI**, **JavaScript**, **Google Workspace APIs**, and **Telegram Bot API**.
 
 ---
 
@@ -1232,5 +1477,3 @@ This project is part of my **30-Day n8n Automation Portfolio**, showcasing pract
 This project is licensed under the **MIT License**.
 
 You are free to use, modify, and distribute this project in accordance with the terms of the MIT License.
-
----
